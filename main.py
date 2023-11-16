@@ -58,7 +58,34 @@ def delete_term(update: Update, term: str, type: str):
     logger.info('delete_term type: "%s", term: "%s"', type, term)
 
 def list_terms(update: Update, type: str):
-    logger.info('list_terms type: "%s"', type)
+    callback_query = update.callback_query
+    page = int(callback_query.data.split('_')[1]) if callback_query else 0
+
+    logger.info('list_terms type: "%s", page: "%s"', type, page)
+
+    page_size = 1
+    offset = page * page_size
+    query = 'SELECT id, term FROM search_terms where type = %s LIMIT %s OFFSET %s'
+    terms = db.fetch_data(query, (type, page_size, offset))
+
+    keyboard = [[InlineKeyboardButton(term_text, callback_data=f'noop_{term_id}'),
+                 InlineKeyboardButton('❌', callback_data=f'delete_{term_id}')] for term_id, term_text in terms]
+
+    navigation_buttons = []
+    if page > 0:
+        navigation_buttons.append(InlineKeyboardButton('⬅️¸ Previous', callback_data=f'{type}s_{page-1}'))
+    if len(terms) == page_size:
+        navigation_buttons.append(InlineKeyboardButton('Next ➡️¸', callback_data=f'{type}s_{page+1}'))
+    if navigation_buttons:
+        keyboard.append(navigation_buttons)
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if callback_query:
+        callback_query.edit_message_text('Search Terms:', reply_markup=reply_markup)
+    else:
+        update.message.reply_text('Search Terms:', reply_markup=reply_markup)
+
 
 # Function for domain
 def add_domain(update: Update, context: CallbackContext):
@@ -105,10 +132,12 @@ if __name__ == '__main__':
     dp.add_handler(CommandHandler("help", help_command))
     dp.add_handler(CommandHandler("add_domain", add_domain, pass_args=True))
     dp.add_handler(CommandHandler("domains", domains))
+    dp.add_handler(CallbackQueryHandler(domains, pattern='^domains_.*$'))
     dp.add_handler(CommandHandler("delete_domain", delete_domain, pass_args=True))
 
     dp.add_handler(CommandHandler("add_keyword", add_keyword, pass_args=True))
     dp.add_handler(CommandHandler("keywords", keywords))
+    dp.add_handler(CallbackQueryHandler(keywords, pattern='^keywords_.*$'))
     dp.add_handler(CommandHandler("delete_keyword", delete_keyword, pass_args=True))
 
     dp.add_error_handler(error)
