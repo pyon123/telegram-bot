@@ -48,7 +48,7 @@ def add_term(update: Update, term: str, type: str):
     existing_record = db.fetch_data(check_query, (term, type))
 
     if existing_record:
-        update.message.reply_text(f'This {type} "{term}" already exists.')
+        update.message.reply_text(f'{type} "{term}" already exists.')
     else:
         insert_query = 'INSERT INTO search_terms (term, type) VALUES (%s, %s);'
         db.execute_query(insert_query, (term, type))
@@ -57,13 +57,23 @@ def add_term(update: Update, term: str, type: str):
 def delete_term(update: Update, term: str, type: str):
     logger.info('delete_term type: "%s", term: "%s"', type, term)
 
+    check_query = 'SELECT id FROM search_terms WHERE term = %s AND type = %s;'
+    existing_record = db.fetch_data(check_query, (term, type))
+
+    if existing_record:
+        delete_query = 'DELETE FROM search_terms WHERE term = %s AND type = %s;'
+        db.execute_query(delete_query, (term, type))
+        update.message.reply_text(f'{type} "{term}" has been deleted.')
+    else:
+        update.message.reply_text(f'{type} "{term}" does not exist.')
+
 def list_terms(update: Update, type: str):
     callback_query = update.callback_query
     page = int(callback_query.data.split('_')[1]) if callback_query else 0
 
     logger.info('list_terms type: "%s", page: "%s"', type, page)
 
-    page_size = 1
+    page_size = 5
     offset = page * page_size
     query = 'SELECT id, term FROM search_terms where type = %s LIMIT %s OFFSET %s'
     terms = db.fetch_data(query, (type, page_size, offset))
