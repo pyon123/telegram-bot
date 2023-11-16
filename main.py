@@ -69,7 +69,7 @@ def list_terms(update: Update, type: str):
     terms = db.fetch_data(query, (type, page_size, offset))
 
     keyboard = [[InlineKeyboardButton(term_text, callback_data=f'noop_{term_id}'),
-                 InlineKeyboardButton('❌', callback_data=f'delete_{term_id}')] for term_id, term_text in terms]
+                 InlineKeyboardButton('❌', callback_data=f'deleteTerm_{page}_{term_id}_{type}')] for term_id, term_text in terms]
 
     navigation_buttons = []
     if page > 0:
@@ -123,6 +123,24 @@ def delete_keyword(update: Update, context: CallbackContext):
 def keywords(update: Update, context: CallbackContext):
     list_terms(update, 'keyword')
 
+def delete_term_by_id(update: Update, context: CallbackContext):
+    callback_query = update.callback_query
+    if callback_query is None:
+        callback_query.answer('Please provide a ID.')
+
+    page = int(callback_query.data.split('_')[1]) if callback_query else 0
+    id = int(callback_query.data.split('_')[2]) if callback_query else 0
+    type = callback_query.data.split('_')[3]
+    
+    logger.info(f'delete_term_by_id ==> page: {page}, id: {id}, type: {type}')
+
+    db.execute_query('DELETE FROM search_terms WHERE id = %s', (id,))
+
+    callback_query.answer('Search term deleted.')
+
+    list_terms(update, type)
+    
+
 if __name__ == '__main__':
     logger.info("Starting the bot")
 
@@ -139,6 +157,8 @@ if __name__ == '__main__':
     dp.add_handler(CommandHandler("keywords", keywords))
     dp.add_handler(CallbackQueryHandler(keywords, pattern='^keywords_.*$'))
     dp.add_handler(CommandHandler("delete_keyword", delete_keyword, pass_args=True))
+
+    dp.add_handler(CallbackQueryHandler(delete_term_by_id, pattern='^deleteTerm_.*$'))
 
     dp.add_error_handler(error)
 
