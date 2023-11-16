@@ -1,7 +1,7 @@
 from mysql import connector
 from mysql.connector import Error
 
-class MySQLDatabase:
+class MySQL:
     def __init__(self, host, user, password, database):
         self.connection = connector.connect(
             host=host,
@@ -16,9 +16,11 @@ class MySQLDatabase:
             self.cursor.execute(query, params)
             self.connection.commit()
             print("Query executed successfully")
+            return True
         except Error as err:
             print(f"Mysql execute Error: {err}")
             self.connection.rollback()
+            return False
 
     def fetch_data(self, query, params=None):
         try:
@@ -32,6 +34,3 @@ class MySQLDatabase:
     def close_connection(self):
         self.cursor.close()
         self.connection.close()
-
-    def __del__(self):
-        self.close_connection()
