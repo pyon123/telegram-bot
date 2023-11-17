@@ -4,6 +4,7 @@ import os
 from telegram import Update, Bot, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
 from utils.mysqlLib import MySQL
+from utils.leakix import search_all
 
 load_dotenv()
 
@@ -105,7 +106,6 @@ def list_terms(update: Update, type: str):
     else:
         update.message.reply_text('Search Terms:', reply_markup=reply_markup)
 
-
 # Function for domain
 def add_domain(update: Update, context: CallbackContext):
     domain = ' '.join(context.args)
@@ -166,6 +166,10 @@ def delete_term_by_id(update: Update, context: CallbackContext):
 
     list_terms(update, type)
     
+def force_search(update: Update, context: CallbackContext):
+    update.message.reply_text("Initiating forced search for all terms. Please wait.")
+    search_all(db)
+    update.message.reply_text("Forced search complete.")
 
 if __name__ == '__main__':
     logger.info("Starting the bot")
@@ -174,6 +178,8 @@ if __name__ == '__main__':
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("help", help_command))
+    dp.add_handler(CommandHandler("force_search", force_search))
+
     dp.add_handler(CommandHandler("add_domain", add_domain, pass_args=True))
     dp.add_handler(CommandHandler("domains", domains))
     dp.add_handler(CallbackQueryHandler(domains, pattern='^domains_.*$'))
