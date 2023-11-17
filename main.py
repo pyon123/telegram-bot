@@ -4,24 +4,22 @@ import os
 from telegram import Update, Bot, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
 from utils.mysqlLib import MySQL
-import atexit
 
 load_dotenv()
 
-db = MySQL(host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'), password=os.getenv('DB_PASSWORD'), database=os.getenv('DB_NAME'))
-
-def cleanup():
-    # This function will be called when the program is about to exit
-    print("Performing cleanup tasks...")
-    db.close_connection()
-
-atexit.register(cleanup)
+db = MySQL(
+    host=os.getenv('DB_HOST'),
+    user=os.getenv('DB_USER'),
+    password=os.getenv('DB_PASSWORD'),
+    database=os.getenv('DB_NAME')
+)
 
 # Function to get the main command keyboard
 def get_main_keyboard():
     keyboard = [
         ['/domains', '/add_domain', '/delete_domain'],
-        ['/keywords', '/add_keyword', '/delete_keyword']
+        ['/keywords', '/add_keyword', '/delete_keyword'],
+        ['/force_search', '/help']
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
 
@@ -38,6 +36,7 @@ def help_command(update: Update, context: CallbackContext):
         '/keywords - List all keywards.\n'
         '/add_keyword - Add a new keyword.\n'
         '/delete_keyword - delete a keyword.\n'
+        '/force_search - search term via leakix.\n'
         'Just tap a button below to get started.',
         reply_markup=reply_markup
     )
@@ -46,6 +45,12 @@ def add_term(update: Update, term: str, type: str):
     logger.info('add_term type: "%s", term: "%s"', type, term)
     check_query = 'SELECT id FROM search_terms WHERE term = %s AND type = %s;'
     existing_record = db.fetch_data(check_query, (term, type))
+
+    if type == 'domain':
+        existing_domain = db.fetch_data('SELECT id FROM scanner_domains WHERE domain = %s;', (term,))
+        if not existing_domain:
+            logger.info('add domain "%s"', term)
+            db.execute_query('INSERT INTO scanner_domains (domain) VALUES (%s);', (term,))
 
     if existing_record:
         update.message.reply_text(f'{type} "{term}" already exists.')
@@ -60,6 +65,10 @@ def delete_term(update: Update, term: str, type: str):
     check_query = 'SELECT id FROM search_terms WHERE term = %s AND type = %s;'
     existing_record = db.fetch_data(check_query, (term, type))
 
+    if type == 'domain':
+        logger.info('delete domain "%s"', term)
+        db.execute_query('DELETE FROM scanner_domains WHERE domain = %s AND subdomains_discovered = 0;', (term,))
+
     if existing_record:
         delete_query = 'DELETE FROM search_terms WHERE term = %s AND type = %s;'
         db.execute_query(delete_query, (term, type))
@@ -71,7 +80,7 @@ def list_terms(update: Update, type: str):
     callback_query = update.callback_query
     page = int(callback_query.data.split('_')[1]) if callback_query else 0
 
-    logger.info('list_terms type: "%s", page: "%s"', type, page)
+    logger.info('list_terms ==> type: "%s", page: "%s"', type, page)
 
     page_size = 5
     offset = page * page_size
@@ -144,7 +153,14 @@ def delete_term_by_id(update: Update, context: CallbackContext):
     
     logger.info(f'delete_term_by_id ==> page: {page}, id: {id}, type: {type}')
 
-    db.execute_query('DELETE FROM search_terms WHERE id = %s', (id,))
+    if type == 'domain':
+        terms = db.fetch_data('SELECT term FROM search_terms WHERE id = %s AND type = "domain";', (id,))
+        if (terms):
+            term = terms[0]
+            logger.info('delete domain "%s"', term)
+            db.execute_query('DELETE FROM scanner_domains WHERE domain = %s AND subdomains_discovered = 0;', (term[0],))
+
+    db.execute_query('DELETE FROM search_terms WHERE id = %s;', (id,))
 
     callback_query.answer('Search term deleted.')
 
