@@ -119,6 +119,6 @@ def search_all(db: MySQL):
                 SET last_dirsearch_scan=%s 
                 WHERE id=%s
             """, (now, domain_id))
-            logger.info(f"Dirsearch scan completed for domain: {domain_record['domain']}")
+            logger.info(f"Dirsearch scan completed for domain: {domain_record[1]}")
 
     logger.info("Scanning process completed.")
