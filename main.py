@@ -4,7 +4,8 @@ import os
 from telegram import Update, Bot, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
 from utils.mysqlLib import MySQL
-from utils.leakix import search_all
+from utils.leakix import search_all as leakix_search
+from utils.dirsearch import search_all as dirsearch_all
 
 load_dotenv()
 
@@ -20,7 +21,7 @@ def get_main_keyboard():
     keyboard = [
         ['/domains', '/add_domain', '/delete_domain'],
         ['/keywords', '/add_keyword', '/delete_keyword'],
-        ['/force_search', '/help']
+        ['/force_search', '/force_dirsearch', '/help']
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
 
@@ -168,8 +169,13 @@ def delete_term_by_id(update: Update, context: CallbackContext):
     
 def force_search(update: Update, context: CallbackContext):
     update.message.reply_text("Initiating forced search for all terms. Please wait.")
-    search_all(db)
+    leakix_search(db)
     update.message.reply_text("Forced search complete.")
+
+def force_dirsearch(update: Update, context: CallbackContext):
+    update.message.reply_text("Initiating forced dirsearch for all domains. Please wait.")
+    dirsearch_all(db)
+    update.message.reply_text("Forced dirsearch complete.")
 
 if __name__ == '__main__':
     logger.info("Starting the bot")
@@ -179,6 +185,7 @@ if __name__ == '__main__':
 
     dp.add_handler(CommandHandler("help", help_command))
     dp.add_handler(CommandHandler("force_search", force_search))
+    dp.add_handler(CommandHandler("force_dirsearch", force_dirsearch))
 
     dp.add_handler(CommandHandler("add_domain", add_domain, pass_args=True))
     dp.add_handler(CommandHandler("domains", domains))
