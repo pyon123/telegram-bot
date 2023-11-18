@@ -87,9 +87,9 @@ def search_all(db: MySQL):
         futures = []
 
         for domain_record in domains:
-            domain_id = domain_record[0]
-            domain = domain_record[1]
-            last_dirsearch_scan = domain_record[5]
+            domain_id = domain_record['id']
+            domain = domain_record['domain']
+            last_dirsearch_scan = domain_record['last_dirsearch_scan']
 
             subdomains = store_subdomains(db, domain, domain_id)
             logger.info(f"Subdomains discovered and saved for domain: {domain}")
@@ -105,7 +105,7 @@ def search_all(db: MySQL):
         concurrent.futures.wait(futures)
 
         for domain_record in domains:
-            domain_id = domain_record[0]
+            domain_id = domain_record['id']
             # update domain dirsearch
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             db.execute_query("""
@@ -113,6 +113,6 @@ def search_all(db: MySQL):
                 SET last_dirsearch_scan=%s 
                 WHERE id=%s
             """, (now, domain_id))
-            logger.info(f"Dirsearch scan completed for domain: {domain_record[1]}")
+            logger.info(f"Dirsearch scan completed for domain: {domain_record['domain']}")
 
     logger.info("Scanning process completed.")

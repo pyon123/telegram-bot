@@ -81,7 +81,7 @@ def search_all(db: MySQL):
     active_terms = db.fetch_data('SELECT term FROM search_terms WHERE active = 1')
 
     for term_tuple in active_terms:
-        term = term_tuple[0]
+        term = term_tuple['term']
         try:
             results = search_leakix(term)
             records = parse_json_sequence(results, term)

@@ -89,8 +89,8 @@ def list_terms(update: Update, type: str):
     query = 'SELECT id, term FROM search_terms where type = %s LIMIT %s OFFSET %s'
     terms = db.fetch_data(query, (type, page_size, offset))
 
-    keyboard = [[InlineKeyboardButton(term_text, callback_data=f'noop_{term_id}'),
-                 InlineKeyboardButton('❌', callback_data=f'deleteTerm_{page}_{term_id}_{type}')] for term_id, term_text in terms]
+    keyboard = [[InlineKeyboardButton(term['term'], callback_data=f'noop_{term["id"]}'),
+                 InlineKeyboardButton('❌', callback_data=f'deleteTerm_{page}_{term["id"]}_{type}')] for term in terms]
 
     navigation_buttons = []
     if page > 0:
@@ -159,7 +159,7 @@ def delete_term_by_id(update: Update, context: CallbackContext):
         if (terms):
             term = terms[0]
             logger.info('delete domain "%s"', term)
-            db.execute_query('DELETE FROM scanner_domains WHERE domain = %s AND subdomains_discovered = 0;', (term[0],))
+            db.execute_query('DELETE FROM scanner_domains WHERE domain = %s AND subdomains_discovered = 0;', (term['term'],))
 
     db.execute_query('DELETE FROM search_terms WHERE id = %s;', (id,))
 
