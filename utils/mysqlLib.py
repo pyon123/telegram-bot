@@ -1,4 +1,3 @@
-import atexit
 from mysql.connector import pooling, Error
 
 class MySQL:
@@ -8,7 +7,8 @@ class MySQL:
             user=user,
             password=password,
             database=database,
-            pool_size=5
+            pool_size=5,
+            use_pure=True 
         )
 
     def execute_query(self, query, params=None):
@@ -28,12 +28,12 @@ class MySQL:
                 cursor.close()
             connection.close()
 
-    def fetch_data(self, query, params=None):
+    def fetch_data(self, query, params=None, dictionary=True):
         connection = self.pool.get_connection()
         cursor = None
 
         try:
-            cursor = connection.cursor()
+            cursor = connection.cursor(dictionary=dictionary)
             cursor.execute(query, params)
             result = cursor.fetchall()
             return result

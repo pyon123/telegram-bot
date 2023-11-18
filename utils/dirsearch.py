@@ -60,13 +60,7 @@ def run_dirsearch(db: MySQL, domain):
             path = result["url"]
             status_code = result["status"]
             existing = db.fetch_data('SELECT id FROM dirsearch_results WHERE domain = %s AND path = %s;', (domain, path))
-            if existing:
-                db.execute_query("""
-                    UPDATE dirsearch_results 
-                    SET status_code=%s, published=0
-                    WHERE domain = %s AND path = %s
-                """, (status_code, domain, path))
-            else:
+            if not existing:
                  db.execute_query("""
                     INSERT INTO dirsearch_results 
                     (domain, path, status_code, published) 
