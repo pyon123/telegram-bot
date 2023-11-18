@@ -7,8 +7,7 @@ class MySQL:
             user=user,
             password=password,
             database=database,
-            pool_size=5,
-            use_pure=True 
+            pool_size=5
         )
 
     def execute_query(self, query, params=None):

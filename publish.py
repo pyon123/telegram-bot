@@ -106,14 +106,6 @@ def publish_domains():
     except Exception as e:
         logger.error(f"publish_domains error occurred: {e}")
 
-running = False
 if __name__ == "__main__":
-    if not running:
-        running = True
-
-        publish_search()
-        publish_domains()
-
-        running = False
-    else:
-        logger.info("Publisher is running")
+    publish_search()
+    publish_domains()
