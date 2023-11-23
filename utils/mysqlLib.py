@@ -1,9 +1,17 @@
+import os
+from datetime import datetime
 from mysql.connector import pooling, Error
 
 class MySQL:
-    def __init__(self, host, user, password, database):
+    def __init__(self, host, port, user, password, database):
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        process_id = os.getpid()
+        pool_name = f"db_pool_{timestamp}_{process_id}"
+
         self.pool = pooling.MySQLConnectionPool(
+            pool_name=pool_name,
             host=host,
+            port=port,
             user=user,
             password=password,
             database=database,
