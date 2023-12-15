@@ -6,24 +6,18 @@ import requests
 import time
 import json
 
-BASE_URL = "https://leakix.net/search"
+BASE_URL = "https://leakix.net/bulk/search"
 
 def parse_json_sequence(json_data, term):  # Added term parameter
     records = []
-    fingerprints_seen = set()
-
     for record in json_data:
         fingerprint = record.get('event_fingerprint')
-        if fingerprint in fingerprints_seen:
-            continue
-        fingerprints_seen.add(fingerprint)
-
-        event_type = record.get('event_type')
         event_source = record.get('event_source')
         ip = record.get('ip')
         host = record.get('host')
         summary = record.get('summary')
         time_str = record.get('time')
+        port = int(record.get('port'))
 
         # Convert ISO 8601 time to MySQL DATETIME format
         if time_str:
@@ -40,13 +34,14 @@ def parse_json_sequence(json_data, term):  # Added term parameter
 
         records.append({
             'resource_id': fingerprint,
-            'events_summary': summary,
+            'event_summary': summary,
             'ip': ip,
             'event_source': event_source,
             'host': host,
-            'fingerprints': [fingerprint],
+            'fingerprint': fingerprint,
             'time': time_str,  # Updated to the converted time string
-            'origin_keyword': term  # Add the origin keyword to the record
+            'origin_keyword': term,  # Add the origin keyword to the record
+            'port': port
         })
 
     return records
@@ -63,14 +58,26 @@ def search_leakix(search_term):
     for field in ['events.summary', 'host']:
         query = f"+{field}:~.*{search_term}~.* +time:>{time_date}"
         params = {
-            'scope': "leaks",
+            'scope': "leak",
             'q': query
         }
         response = requests.get(BASE_URL, headers=headers, params=params)
         logger.info(f"Leakix API response status for {field}: {response.status_code}")
         if response.status_code == 200:
-            # logger.info(f"Leakix API response data for {field}: {response.text}")
-            results.extend(response.json())
+            response_text = response.text
+
+            arr = response_text.split('}\n{')
+            for index, str in enumerate(arr):
+                try:
+                    if index == 0 :
+                        obj = json.loads(str + '}')
+                    elif index == len(arr) - 1:
+                        obj = json.loads('{' + str)
+                    else:
+                        obj = json.loads('{' + str + '}')
+                    results += obj["events"]
+                except:
+                    logger.error('Leakix json parse error')
         else:
             logger.error(f"Leakix API request failed for {field}: {response.text}")
             response.raise_for_status()
@@ -86,23 +93,24 @@ def search_all(db: MySQL):
             results = search_leakix(term)
             records = parse_json_sequence(results, term)
             for record in records:
-                if record['events_summary'] in ['DotEnvConfigPlugin', 'YiiDebugPlugin', 'GitConfigHttpPlugin', 'JiraPlugin', 'MongoOpenPlugin', 'DockerRegistryHttpPlugin', 'ElasticSearchOpenPlugin']:
+                if record['event_source'] not in ['DotEnvConfigPlugin', 'YiiDebugPlugin', 'GitConfigHttpPlugin', 'JiraPlugin', 'MongoOpenPlugin', 'DockerRegistryHttpPlugin', 'ElasticSearchOpenPlugin']:
                     continue
 
-                exsiting_record = db.fetch_data('SELECT id FROM results_table WHERE resource_id = %s;', (record['resource_id'],))
+                exsiting_record = db.fetch_data('SELECT id FROM results_table WHERE resource_id = %s and host = %s and port = %s;', (record['resource_id'], record['host'], record['port']))
                 if not exsiting_record:
                     db.execute_query('''
-                    INSERT INTO results_table (resource_id, events_summary, ip, event_source, host, fingerprints, time, origin_keyword)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO results_table (resource_id, event_summary, ip, event_source, host, fingerprint, time, origin_keyword, port)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ''', (
                         record['resource_id'],
-                        record['events_summary'],
+                        record['event_summary'],
                         record['ip'],
                         record['event_source'],
                         record['host'],
-                        json.dumps(record['fingerprints']),
+                        record['fingerprint'],
                         record['time'],
-                        record['origin_keyword']  # Add the origin keyword to the insert statement
+                        record['origin_keyword'],  # Add the origin keyword to the insert statement
+                        record['port']
                     ))
                     logger.info(f"Inserted record with resource_id: {record['resource_id']}")
                 else:
