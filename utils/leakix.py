@@ -86,6 +86,9 @@ def search_all(db: MySQL):
             results = search_leakix(term)
             records = parse_json_sequence(results, term)
             for record in records:
+                if record['events_summary'] in ['DotEnvConfigPlugin', 'YiiDebugPlugin', 'GitConfigHttpPlugin', 'JiraPlugin', 'MongoOpenPlugin', 'DockerRegistryHttpPlugin', 'ElasticSearchOpenPlugin']:
+                    continue
+
                 exsiting_record = db.fetch_data('SELECT id FROM results_table WHERE resource_id = %s;', (record['resource_id'],))
                 if not exsiting_record:
                     db.execute_query('''
