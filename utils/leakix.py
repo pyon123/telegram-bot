@@ -66,6 +66,9 @@ def search_leakix(search_term):
         if response.status_code == 200:
             response_text = response.text
 
+            if not response_text:
+                continue
+
             arr = response_text.split('}\n{')
             for index, str in enumerate(arr):
                 try:
@@ -77,7 +80,7 @@ def search_leakix(search_term):
                         obj = json.loads('{' + str + '}')
                     results += obj["events"]
                 except:
-                    logger.error('Leakix json parse error')
+                    logger.error(f"Leakix json parse error ==> {field} {time_date}: {response_text}")
         else:
             logger.error(f"Leakix API request failed for {field}: {response.text}")
             response.raise_for_status()
