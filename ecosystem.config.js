@@ -9,7 +9,7 @@ module.exports = {
       watch: false,
       max_memory_restart: '1G',
       exec_mode: 'fork',
-      cwd: '/home/tg'
+      cwd: '/root/telegram-bot'
     },
     {
       name: 'publisher',
@@ -21,7 +21,7 @@ module.exports = {
       max_memory_restart: '500M',
       cron_restart: '0 * * * *', // every 1 hour
       exec_mode: 'fork',
-      cwd: '/home/tg'
+      cwd: '/root/telegram-bot'
     },
     {
       name: 'search',
@@ -33,7 +33,7 @@ module.exports = {
       max_memory_restart: '1G',
       cron_restart: '0 */12 * * *', // every 12 hours
       exec_mode: 'fork',
-      cwd: '/home/tg'
+      cwd: '/root/telegram-bot'
     },
   ]
 };
